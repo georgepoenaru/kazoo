@@ -6,10 +6,14 @@
 -define(DEVICE_1_ID, <<"device00000000000000000000000001">>).
 -define(DEVICE_2_ID, <<"device00000000000000000000000002">>).
 
+invalid_parameters_test_() ->
+    [?_assertMatch({'error', 'invalid_parameters'}, kz_device:fetch(?MASTER_ACCOUNT, 256))].
+
 validate_fixtures_test_() ->
     {'ok', Schema} = kz_json_schema:fload(<<"devices">>),
     {'ok', Device1} = kz_device:fetch(?MASTER_ACCOUNT, ?DEVICE_1_ID),
-    [{"validate device fixture 1", ?_assertMatch({'ok', _}, validate(Schema, Device1))}].
+    [{"validate device fixture 1", ?_assertMatch({'ok', _}, validate(Schema, Device1))}
+    ,{"validate device fixture 2", ?_assert(kz_device:is_device(Device1)}].
 
 custom_sip_headers_test_() ->
     {'ok', TestDevice} = kz_device:fetch(?MASTER_ACCOUNT, ?DEVICE_1_ID),
