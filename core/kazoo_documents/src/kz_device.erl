@@ -100,7 +100,7 @@ open_cache_doc(AccountDb, DeviceId) ->
 new() ->
     kz_json:from_list([{<<"pvt_type">>, type()}]).
 
--spec is_device(doc() | kz_json:object()) -> boolean().
+-spec is_device(doc()) -> boolean().
 is_device(Doc) ->
     kz_doc:type(Doc) =:= type().
 

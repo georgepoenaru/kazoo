@@ -13,7 +13,9 @@ validate_fixtures_test_() ->
     {'ok', Schema} = kz_json_schema:fload(<<"devices">>),
     {'ok', Device1} = kz_device:fetch(?MASTER_ACCOUNT, ?DEVICE_1_ID),
     [{"validate device fixture 1", ?_assertMatch({'ok', _}, validate(Schema, Device1))}
-    ,{"validate device fixture 2", ?_assert(kz_device:is_device(Device1)}].
+    ,{"simple coverage check for is_device", ?_assert(kz_device:is_device(Device1))}
+	,{"sip_username check", ?_assertEqual(<<"">>, kz_device:sip_username(?DEVICE_1_ID))}
+    ].
 
 custom_sip_headers_test_() ->
     {'ok', TestDevice} = kz_device:fetch(?MASTER_ACCOUNT, ?DEVICE_1_ID),
