@@ -16,6 +16,11 @@ all: compile
 
 include $(ROOT)/make/kz.mk
 
+compile-test: compile-test-deps
+
+compile-test-deps:
+	$(MAKE) -C $(ROOT)/core/kazoo_stdlib compile-test
+
 clean-generated:
 	$(if $(wildcard $(GEN_OUT)), rm $(GEN_OUT))
 

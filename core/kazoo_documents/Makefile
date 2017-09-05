@@ -6,3 +6,9 @@ TEST_EBINS = $(ROOT)/applications/crossbar/ebin
 all: compile
 
 include $(ROOT)/make/kz.mk
+
+compile-test: compile-test-deps
+
+compile-test-deps:
+	$(MAKE) -C $(ROOT)/core/kazoo_stdlib compile-test
+	$(MAKE) -C $(ROOT)/core/kazoo_config compile-test
