@@ -16,6 +16,7 @@
         ,sip_ip/1, sip_ip/2, set_sip_ip/2
         ,sip_invite_format/1, sip_invite_format/2, set_sip_invite_format/2
         ,sip_route/1, sip_route/2, set_sip_route/2
+		,set_custom_sip_headers/2
         ,custom_sip_headers_inbound/1, custom_sip_headers_inbound/2, set_custom_sip_headers_inbound/2
         ,custom_sip_headers_outbound/1, custom_sip_headers_outbound/2, set_custom_sip_headers_outbound/2
         ,custom_sip_header_inbound/2, custom_sip_header_inbound/3
@@ -128,6 +129,7 @@ sip_method(DeviceJObj) ->
 sip_method(DeviceJObj, Default) ->
     kz_json:get_value(?METHOD, DeviceJObj, Default).
 
+%% Deprecated
 -spec sip_realm(doc()) -> api_binary().
 -spec sip_realm(doc(), Default) -> ne_binary() | Default.
 sip_realm(DeviceJObj) ->
