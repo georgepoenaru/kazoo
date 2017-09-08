@@ -132,6 +132,7 @@ to_json(Req0, Context) ->
 
 -spec pagination(payload()) -> payload().
 pagination({Req, Context}=Payload) ->
+    %% io:format("~n~p page_size ~p ~n", [{?MODULE, ?LINE}, cb_context:fetch(Context, 'page_size')]),
     PageSize = cb_context:fetch(Context, 'page_size', 0),
     'ok' = cowboy_req:chunk(<<", \"page_size\": ", (kz_term:to_binary(PageSize))/binary>>, Req),
     IsInteraction = cb_context:fetch(Context, 'interaction', 'false'),
@@ -141,6 +142,11 @@ pagination({Req, Context}=Payload) ->
     end,
     StartKey = pagination_key(IsInteraction, 'start_key', Context),
     'ok' = cowboy_req:chunk(<<", \"start_key\": \"", (kz_term:to_binary(StartKey))/binary, "\"">>, Req),
+    io:format("~n~p used startkey ~p next_start_key ~p~n"
+    ,[{?MODULE, ?LINE}
+     ,StartKey
+     ,pagination_key(IsInteraction, 'next_start_key', Context)
+     ]),
     Payload.
 
 -spec pagination_key(boolean(), atom(), cb_context:context()) ->
@@ -270,7 +276,7 @@ validate(Context, _, _) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec load_cdr_summary(cb_context:context(), req_nouns()) -> cb_context:context().
-load_cdr_summary(Context, [_, {?KZ_ACCOUNTS_DB, [_]} | _]) ->
+load_cdr_summary(Context, [_, {?KZ_ACCOUNTS_DB, _} | _]) ->
     lager:debug("loading cdrs for account ~s", [cb_context:account_id(Context)]),
     case create_view_options('undefined', Context) of
         {'ok', ViewOptions} ->
@@ -296,7 +302,7 @@ load_cdr_summary(Context, _Nouns) ->
 
 -spec load_interaction_cdr_summary(cb_context:context(), req_nouns()) ->
                                           cb_context:context().
-load_interaction_cdr_summary(Context, [_, {?KZ_ACCOUNTS_DB, [_]} | _]) ->
+load_interaction_cdr_summary(Context, [_, {?KZ_ACCOUNTS_DB, _} | _]) ->
     lager:debug("loading interaction cdrs for account ~s", [cb_context:account_id(Context)]),
     case create_view_options(undefined, fun create_interaction_view_options/4, Context) of
         {'ok', ViewOptions} ->
@@ -390,9 +396,7 @@ create_view_options(OwnerId, Context) ->
     create_view_options(OwnerId, fun create_view_options/4, Context).
 
 create_view_options(OwnerId, Fun, Context) ->
-    MaxRange = kapps_config:get_integer(?MOD_CONFIG_CAT, <<"maximum_range">>, (?SECONDS_IN_DAY * 31  + ?SECONDS_IN_HOUR)),
-
-    case cb_modules_util:range_view_options(Context, MaxRange) of
+    case cb_modules_util:range_view_options(Context) of
         {CreatedFrom, CreatedTo} ->
             Fun(OwnerId, Context, CreatedFrom, CreatedTo);
         Context1 -> Context1
@@ -401,40 +405,52 @@ create_view_options(OwnerId, Fun, Context) ->
 -spec create_view_options(api_binary(), cb_context:context(), gregorian_seconds(), gregorian_seconds()) ->
                                  {'ok', crossbar_doc:view_options()}.
 create_view_options('undefined', Context, CreatedFrom, CreatedTo) ->
-    {'ok', [{'startkey', CreatedTo}
-           ,{'endkey', CreatedFrom}
-           ,{'limit', pagination_page_size(Context)}
-           ,'descending'
-           ]};
+    {'ok'
+    ,props:filter_undefined(
+       [{'startkey', CreatedTo}
+       ,{'endkey', CreatedFrom}
+       ,{'limit', pagination_page_size(Context)}
+       ,'descending'
+       ])
+    };
 create_view_options(OwnerId, Context, CreatedFrom, CreatedTo) ->
-    {'ok', [{'startkey', [OwnerId, CreatedTo]}
-           ,{'endkey', [OwnerId, CreatedFrom]}
-           ,{'limit', pagination_page_size(Context)}
-           ,'descending'
-           ]}.
+    {'ok'
+    ,props:filter_undefined(
+       [{'startkey', [OwnerId, CreatedTo]}
+       ,{'endkey', [OwnerId, CreatedFrom]}
+       ,{'limit', pagination_page_size(Context)}
+       ,'descending'
+       ])
+    }.
 
 -spec create_interaction_view_options(api_binary(), cb_context:context(), pos_integer(), pos_integer()) ->
                                              {'ok', crossbar_doc:view_options()}.
 create_interaction_view_options('undefined', Context, CreatedFrom, CreatedTo) ->
-    {'ok', [{'startkey', [CreatedTo]}
-           ,{'endkey', [CreatedFrom, kz_json:new()]}
-           ,{'limit', pagination_page_size(Context)}
-           ,{'group', 'true'}
-           ,{'group_level', 2}
-           ,{'reduce', 'true'}
-           ,'descending'
-            | maybe_add_stale_to_options(?STALE_CDR)
-           ]};
+    {'ok'
+    ,props:filter_undefined(
+       [{'startkey', [CreatedTo]}
+       ,{'endkey', [CreatedFrom, kz_json:new()]}
+       ,{'limit', pagination_page_size(Context)}
+       ,{'group', 'true'}
+       ,{'group_level', 2}
+       ,{'reduce', 'true'}
+       ,'descending'
+        | maybe_add_stale_to_options(?STALE_CDR)
+       ])
+    };
 create_interaction_view_options(OwnerId, Context, CreatedFrom, CreatedTo) ->
-    {'ok', [{'startkey', [OwnerId, CreatedTo]}
-           ,{'endkey', [OwnerId, CreatedFrom, kz_json:new()]}
-           ,{'limit', pagination_page_size(Context)}
-           ,{'group', 'true'}
-           ,{'group_level', 3}
-           ,{'reduce', 'true'}
-           ,'descending'
-            | maybe_add_stale_to_options(?STALE_CDR)
-           ]}.
+    {'ok'
+    ,props:filter_undefined(
+       [{'startkey', [OwnerId, CreatedTo]}
+       ,{'endkey', [OwnerId, CreatedFrom, kz_json:new()]}
+       ,{'limit', pagination_page_size(Context)}
+       ,{'group', 'true'}
+       ,{'group_level', 3}
+       ,{'reduce', 'true'}
+       ,'descending'
+        | maybe_add_stale_to_options(?STALE_CDR)
+       ])
+    }.
 
 -spec maybe_add_stale_to_options(crossbar_doc:view_options()) -> crossbar_doc:view_options().
 maybe_add_stale_to_options(true) ->[ {stale, ok} ];
@@ -449,11 +465,15 @@ create_summary_view_options(_, _, CreatedFrom, CreatedTo) ->
            ,'descending'
            ]}.
 
--spec pagination_page_size(cb_context:context()) -> pos_integer().
+-spec pagination_page_size(cb_context:context()) -> api_pos_integer().
 pagination_page_size(Context) ->
-    case crossbar_doc:pagination_page_size(Context) of
+    case cb_context:should_paginate(Context)
+        andalso crossbar_doc:pagination_page_size(Context)
+    of
+        'false' -> 'undefined';
         'undefined' -> 'undefined';
-        PageSize -> PageSize + 1
+        PageSize when is_integer(PageSize) -> PageSize + 1;
+        _ -> 'undefined'
     end.
 
 %%--------------------------------------------------------------------
@@ -519,20 +539,57 @@ interaction_view_option('endkey' = Key, ViewOptions) ->
 -spec send_chunked_cdrs(payload()) -> payload().
 send_chunked_cdrs({Req, Context}) ->
     Dbs = cb_context:fetch(Context, 'chunked_dbs'),
-    AuthAccountId = cb_context:auth_account_id(Context),
-    IsReseller = kz_services:is_reseller(AuthAccountId),
-    send_chunked_cdrs(Dbs, {Req, cb_context:store(Context, 'is_reseller', IsReseller)}).
-
--spec send_chunked_cdrs(ne_binaries(), payload()) -> payload().
-send_chunked_cdrs([], Payload) -> Payload;
-send_chunked_cdrs([Db | Dbs], {Req, Context}) ->
-    View = cb_context:fetch(Context, 'chunked_view'),
     ViewOptions = fetch_view_options(Context),
     Context1 = cb_context:store(Context, 'start_key', props:get_value('startkey', ViewOptions)),
-    Context2 = cb_context:store(Context1, 'page_size', 0),
-    {'ok', Ids} = get_cdr_ids(Db, View, ViewOptions),
-    {Context3, CDRIds} = maybe_paginate_and_clean(Context2, Ids),
-    send_chunked_cdrs(Dbs, load_chunked_cdrs(Db, CDRIds, {Req, Context3})).
+    Remaining = case (cb_context:fetch(Context, 'is_csv', 'false')
+                    orelse cb_context:should_paginate(Context)
+                    )
+                    andalso props:get_value('limit', ViewOptions)
+                of
+                    'false' -> 'undefined';
+                    'undefined' -> 'undefined';
+                    L ->
+                        L - 1
+                end,
+    send_chunked_cdrs(Dbs, ViewOptions, Remaining, {Req, cb_context:store(Context1, 'page_size', 0)}).
+
+-spec send_chunked_cdrs(ne_binaries(), crossbar_doc:view_options(), api_pos_integer(), payload()) -> payload().
+send_chunked_cdrs([], _, _, Payload) ->
+    lager:debug("database exhausted"),
+    io:format("~n database exhausted~n"),
+    Payload;
+send_chunked_cdrs(_, _, Remaining, Payload)
+  when is_integer(Remaining)
+       andalso Remaining =< 0 ->
+    lager:debug("page_size exhausted: ~p", [Remaining]),
+    io:format("~n page_size exhausted: ~p~n", [Remaining]),
+    Payload;
+send_chunked_cdrs([Db | Dbs], ViewOptions, Remaining, {Req, Context}) ->
+    View = cb_context:fetch(Context, 'chunked_view'),
+    {'ok', Ids} = get_cdr_ids(Db, View, maybe_adjust_limit(ViewOptions, Remaining)),
+    {Context2, CDRIds} = maybe_paginate_and_clean(Context, Ids),
+    {Req1, Context4} = load_chunked_cdrs(Db, CDRIds, {Req, Context2}),
+    io:format("~n~p Context4 read ~p page_size ~p Remaining ~p New Remaining ~p ~n"
+        ,[{?MODULE, ?LINE}
+         ,length(CDRIds)
+         ,cb_context:fetch(Context4, 'page_size')
+         ,Remaining
+         ,subtract_queried(Remaining, length(CDRIds))
+         ]),
+    send_chunked_cdrs(Dbs, ViewOptions, subtract_queried(Remaining, length(CDRIds)), {Req1, Context4}).
+
+
+-spec maybe_adjust_limit(crossbar_doc:view_options(), api_pos_integer()) -> crossbar_doc:view_options().
+maybe_adjust_limit(ViewOptions, 'undefined') -> ViewOptions;
+maybe_adjust_limit(ViewOptions, Remaining) ->
+    case props:get_value('limit', ViewOptions) of
+        L when L == (Remaining + 1) -> ViewOptions; %% first request
+        L -> props:set_value('limit', L - Remaining, ViewOptions)
+    end.
+
+-spec subtract_queried(api_pos_integer(), non_neg_integer()) -> api_pos_integer().
+subtract_queried('undefined', _) -> 'undefined';
+subtract_queried(Remaining, Queried) -> Remaining - Queried.
 
 -spec fetch_view_options(cb_context:context()) -> crossbar_doc:view_options().
 fetch_view_options(Context) ->
@@ -542,7 +599,7 @@ fetch_view_options(Context) ->
         _ -> ViewOptions
     end.
 
--spec maybe_paginate_and_clean(cb_context:context(), ne_binaries()) ->
+-spec maybe_paginate_and_clean(cb_context:context(), kz_proplist()) ->
                                       {cb_context:context(), ne_binaries()}.
 maybe_paginate_and_clean(Context, []) -> {Context, []};
 maybe_paginate_and_clean(Context, Ids) ->
@@ -551,25 +608,34 @@ maybe_paginate_and_clean(Context, Ids) ->
         _ -> paginate_and_clean(Context, Ids)
     end.
 
--spec paginate_and_clean(cb_context:context(), ne_binaries()) ->
+-spec paginate_and_clean(cb_context:context(), kz_proplist()) ->
                                 {cb_context:context(), ne_binaries()}.
 paginate_and_clean(Context, Ids) ->
     ViewOptions = cb_context:fetch(Context, 'chunked_view_options'),
-    PageSize = erlang:length(Ids),
+    PageSize = erlang:length(Ids) + cb_context:fetch(Context, 'page_size', 0),
     AskedFor =
         case props:get_value('limit', ViewOptions) of
             'undefined' -> PageSize;
             Limit -> Limit - 1
         end,
 
+    io:format("~n~p PageSize ~p AskedFor ~p Context page_size ~p ~n"
+             ,[{?MODULE, ?LINE}
+              ,PageSize
+              ,AskedFor
+              ,cb_context:fetch(Context, 'page_size')
+              ]),
     case AskedFor >= PageSize of
         'true' ->
-            Context1 = cb_context:store(Context, 'page_size', AskedFor),
+            Context1 = cb_context:store(Context, 'page_size', PageSize),
             {Context1, [Id || {Id, _} <- Ids]};
         'false' ->
             {_, LastKey}=Last = lists:last(Ids),
-            Context1 = cb_context:store(Context, 'page_size', AskedFor),
+            Context1 = cb_context:store(Context, 'page_size', PageSize - 1),
             Context2 = cb_context:store(Context1, 'next_start_key', LastKey),
+
+            io:format("~n~p Context2 page_size ~p ~n", [{?MODULE, ?LINE}, cb_context:fetch(Context2, 'page_size')]),
+
             {Context2, [Id || {Id, _} <- lists:delete(Last, Ids)]}
     end.
 
@@ -577,6 +643,7 @@ paginate_and_clean(Context, Ids) ->
                          {'ok', kz_proplist()}.
 get_cdr_ids(Db, View, ViewOptions) ->
     _ = maybe_add_design_doc(Db),
+    io:format("~n~p Db ~p View ~p~n ViewOptions ~p~n", [{?MODULE, ?LINE}, Db, View, ViewOptions]),
     case kz_datamgr:get_results(Db, View, ViewOptions) of
         {'error', _R} ->
             lager:debug("unable to fetch ~s from ~s: ~p", [View, Db, _R]),
@@ -586,6 +653,17 @@ get_cdr_ids(Db, View, ViewOptions) ->
             CDRs = [{kz_doc:id(JObj), kz_json:get_value(<<"key">>, JObj)} || JObj <- JObjs],
             {'ok', CDRs}
     end.
+
+% function(keys, values) {
+%     var compare_fun = function(a, b) {
+%         if (a === null) return 1;
+%         else if (b === null) return -1;
+%         else if (a.channel_time < b.channel_time) return -1;
+%         else if (a.channel_time > b.channel_time) return 1;
+%         else if (a.leg < b.leg) return -1;
+%         else if (a.leg > b.leg) return 1;
+%         else return 0;
+%     };
 
 -spec maybe_add_design_doc(ne_binary()) -> 'ok' | {'error', 'not_found'}.
 maybe_add_design_doc(Db) ->
@@ -669,19 +747,15 @@ normalize_cdr_to_csv(JObj, Context) ->
 
 -spec normalize_cdr_to_csv_header(kz_json:object(), cb_context:context()) -> ne_binary().
 normalize_cdr_to_csv_header(_JObj, Context) ->
-    CSV =
-        kz_binary:join(
-          [K || {K, _Fun} <- csv_rows(Context)]
-                      ,<<",">>
-         ),
-
+    CSV = kz_binary:join([K || {K, _Fun} <- csv_rows(Context)], <<",">>),
     <<CSV/binary, "\r\n">>.
 
 -type csv_column_fun() :: fun((kz_json:object(), gregorian_seconds()) -> ne_binary()).
 
 -spec csv_rows(cb_context:context()) -> [{ne_binary(), csv_column_fun()}].
 csv_rows(Context) ->
-    case cb_context:fetch(Context, 'is_reseller') of
+    AuthAccountId = cb_context:auth_account_id(Context),
+    case kz_services:is_reseller(AuthAccountId) of
         'false' -> ?COLUMNS;
         'true' -> ?COLUMNS ++ ?COLUMNS_RESELLER
     end.
