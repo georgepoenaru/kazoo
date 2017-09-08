@@ -7943,6 +7943,9 @@
         "kapi.conference.config_req": {
             "description": "AMQP API for conference.config_req",
             "properties": {
+                "Conference-ID": {
+                    "type": "string"
+                },
                 "Controls": {
                     "type": "string"
                 },
@@ -23027,6 +23030,54 @@
                     "description": "Media ID (or appropriate media URI) of media to play when caller is about to be connected.",
                     "type": "string"
                 },
+                "announcements": {
+                    "description": "Configuration for periodic announcements to callers waiting in the queue",
+                    "properties": {
+                        "interval": {
+                            "default": 30,
+                            "description": "Time between announcements",
+                            "minimum": 15,
+                            "type": "integer"
+                        },
+                        "media": {
+                            "description": "Custom prompts to be played for the announcements",
+                            "properties": {
+                                "in_the_queue": {
+                                    "description": "Played after the numeric position",
+                                    "type": "string"
+                                },
+                                "increase_in_call_volume": {
+                                    "description": "Played if the estimated wait time has increased since the previous wait time announcement",
+                                    "type": "string"
+                                },
+                                "the_estimated_wait_time_is": {
+                                    "description": "Played before the estimated wait time media",
+                                    "type": "string"
+                                },
+                                "you_are_at_position": {
+                                    "description": "Played before the numeric position",
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "in_the_queue",
+                                "increase_in_call_volume",
+                                "the_estimated_wait_time_is",
+                                "you_are_at_position"
+                            ],
+                            "type": "object"
+                        },
+                        "position_announcements_enabled": {
+                            "description": "Whether announcements of the caller's position in the queue should be played",
+                            "type": "boolean"
+                        },
+                        "wait_time_announcements_enabled": {
+                            "description": "Whether announcements of the estimated wait time in the queue should be played",
+                            "type": "boolean"
+                        }
+                    },
+                    "type": "object"
+                },
                 "caller_exit_key": {
                     "default": "#",
                     "description": "Key caller can press while on hold to exit the queue and continue in the callflow",
@@ -28180,8 +28231,20 @@
                     "type": "object"
                 },
                 "apple": {
+                    "default": {},
                     "description": "pusher apple",
-                    "type": "string"
+                    "properties": {
+                        "certificate": {
+                            "description": "PEM-encoded key and certificate",
+                            "type": "string"
+                        },
+                        "host": {
+                            "default": "api.push.apple.com",
+                            "description": "APNs server host",
+                            "type": "string"
+                        }
+                    },
+                    "type": "object"
                 },
                 "google": {
                     "description": "pusher google",
@@ -29757,9 +29820,6 @@
                             "description": "The audio media parameters",
                             "properties": {
                                 "codecs": {
-                                    "default": [
-                                        "PCMU"
-                                    ],
                                     "description": "A list of audio codecs the device supports",
                                     "items": {
                                         "enum": [
