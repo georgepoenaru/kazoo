@@ -213,6 +213,33 @@
             },
             "type": "object"
         },
+        "account_config.ledgers": {
+            "description": "Schema for ledgers account_config",
+            "properties": {
+                "registered_ledgers": {
+                    "default": [
+                        {
+                            "friendly_name": "Per Minute VoIP",
+                            "name": "per-minute-voip"
+                        },
+                        {
+                            "friendly_name": "Mobile Data (100mB)",
+                            "name": "mobile_data"
+                        },
+                        {
+                            "friendly_name": "Support",
+                            "name": "support"
+                        }
+                    ],
+                    "description": "ledgers registered_ledgers",
+                    "items": {
+                        "type": "object"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
         "account_config.media": {
             "description": "Schema for media account_config",
             "properties": {
@@ -24732,6 +24759,11 @@
                     "default": "early",
                     "description": "callflow.park parked presence type",
                     "type": "string"
+                },
+                "valet_reservation_cleanup_time_ms": {
+                    "default": 3000,
+                    "description": "callflow park valet_reservation_cleanup_time_ms",
+                    "type": "integer"
                 }
             },
             "type": "object"
@@ -26869,6 +26901,33 @@
                     "default": 3600,
                     "description": "kzt_twiml_util maximum length",
                     "type": "integer"
+                }
+            },
+            "type": "object"
+        },
+        "system_config.ledgers": {
+            "description": "Schema for ledgers system_config",
+            "properties": {
+                "registered_ledgers": {
+                    "default": [
+                        {
+                            "friendly_name": "Per Minute VoIP",
+                            "name": "per-minute-voip"
+                        },
+                        {
+                            "friendly_name": "Mobile Data (100mB)",
+                            "name": "mobile_data"
+                        },
+                        {
+                            "friendly_name": "Support",
+                            "name": "support"
+                        }
+                    ],
+                    "description": "ledgers registered_ledgers",
+                    "items": {
+                        "type": "object"
+                    },
+                    "type": "array"
                 }
             },
             "type": "object"
@@ -34781,6 +34840,23 @@
             }
         },
         "/accounts/{ACCOUNT_ID}/ledgers": {
+            "get": {
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/auth_token_header"
+                    },
+                    {
+                        "$ref": "#/parameters/ACCOUNT_ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "request succeeded"
+                    }
+                }
+            }
+        },
+        "/accounts/{ACCOUNT_ID}/ledgers/available": {
             "get": {
                 "parameters": [
                     {
