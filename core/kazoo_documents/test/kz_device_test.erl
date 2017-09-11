@@ -50,7 +50,7 @@ no_legacy_sip_headers_test_() ->
                             ,{<<"out">>, OutCSH}
                             ]
                            ),
-	TestDevice = kz_device:set_custom_sip_headers(Device, CSH),
+    TestDevice = kz_device:set_custom_sip_headers(Device, CSH),
     [?_assertEqual(<<"foo">>, kz_device:custom_sip_header_inbound(TestDevice, <<"x-device-header">>))
     ,?_assertEqual(<<"bar">>, kz_device:custom_sip_header_outbound(TestDevice, <<"x-outbound-header">>))
     ,?_assertEqual('undefined', kz_device:custom_sip_header_inbound(TestDevice, <<"x-legacy-header">>))
@@ -202,36 +202,27 @@ outbound_dynamic_flags_test_() ->
 
 device_param_setting_test_() ->
     {'ok', Device} = kz_device:fetch(?MASTER_ACCOUNT, ?DEVICE_1_ID),
+    
+    Setup = [{<<"rick_and_morty">>, fun kz_device:set_sip_username/2, fun kz_device:sip_username/1}
+            ,{<<"birdperson">>, fun kz_device:set_sip_password/2, fun kz_device:sip_password/1}
+            ,{<<"OAuth">>, fun kz_device:set_sip_method/2, fun kz_device:sip_method/1}
+            ,{<<"2600hz.local:8888">>, fun kz_device:set_sip_route/2, fun kz_device:sip_route/1}
+            ,{<<"10.26.0.100">>, fun kz_device:set_sip_ip/2, fun kz_device:sip_ip/1}
+            ,{<<"rick-l@4a6812.sip.2600hz.local">>, fun kz_device:set_presence_id/2, fun kz_device:presence_id/1}
+            ,{<<"fax">>, fun kz_device:set_sip_invite_format/2, fun kz_device:sip_invite_format/1}
+            ,{<<"Rick Sanchez">>, fun kz_device:set_name/2, fun kz_device:name/1}
+            ,{<<"00:14:65:26:C9:8Z">>, fun kz_device:set_mac_address/2, fun kz_device:mac_address/1}
+            ,{<<"us-en">>, fun kz_device:set_language/2, fun kz_device:language/1}
+            ,{<<"fax_machine">>, fun kz_device:set_device_type/2, fun kz_device:device_type/1}
+            ,{<<"user0000000000000000000000000002">>, fun kz_device:set_owner_id/2, fun kz_device:owner_id/1}
+            ,{'false', fun kz_device:set_enabled/2, fun kz_device:enabled/1}
+            ,{'false', fun kz_device:set_unsolicitated_mwi_updates/2, fun kz_device:unsolicitated_mwi_updates/1}
+            ],
+    
+    [?_assertEqual(Value, Get(Set(Device, Value))) || {Value, Set, Get} <- Setup].
 
-    Device1 = kz_device:set_sip_username(Device, <<"rick_and_morty">>),
-    Device2 = kz_device:set_sip_password(Device, <<"birdperson">>),
-    Device3 = kz_device:set_sip_method(Device, <<"OAuth">>),
-    Device4 = kz_device:set_sip_route(Device, <<"2600hz.local:8888">>),
-    Device5 = kz_device:set_sip_ip(Device, <<"10.26.0.100">>),
-    Device6 = kz_device:set_presence_id(Device, <<"rick-1@4a6812.sip.2600hz.local">>),
-    Device7 = kz_device:set_sip_invite_format(Device, <<"fax">>),
-    Device8 = kz_device:set_name(Device, <<"Rick Sanchez">>),
-    Device9 = kz_device:set_mac_address(Device, <<"00:14:65:26:C9:8Z">>),
-    Device10 = kz_device:set_language(Device, <<"us-en">>),
-    Device11 = kz_device:set_device_type(Device, <<"fax_machine">>),
-    Device12 = kz_device:set_owner_id(Device, <<"user0000000000000000000000000002">>),
-    Device13 = kz_device:set_enabled(Device, 'false'),	
-
-    [?_assertEqual(<<"rick_and_morty">>, kz_device:sip_username(Device1))
-    ,?_assertEqual(<<"birdperson">>, kz_device:sip_password(Device2))
-    ,?_assertEqual(<<"OAuth">>, kz_device:sip_method(Device3))
-    ,?_assertEqual(<<"2600hz.local:8888">>, kz_device:sip_route(Device4))
-    ,?_assertEqual(<<"10.26.0.100">>, kz_device:sip_ip(Device5))
-    ,?_assertEqual(<<"rick-1@4a6812.sip.2600hz.local">>, kz_device:presence_id(Device6))
-    ,?_assertEqual(<<"fax">>, kz_device:sip_invite_format(Device7))
-    ,?_assertEqual(<<"Rick Sanchez">>, kz_device:name(Device8))
-    ,?_assertEqual(<<"00:14:65:26:C9:8Z">>, kz_device:mac_address(Device9))
-    ,?_assertEqual(<<"us-en">>, kz_device:language(Device10))
-    ,?_assertEqual(<<"fax_machine">>, kz_device:device_type(Device11))
-    ,?_assertEqual(<<"user0000000000000000000000000002">>, kz_device:owner_id(Device12))
-    ,?_assertNot(kz_device:enabled(Device13))
-    ].	
-			
+           
+            
 validate(Schema, Device) ->
     kz_json_schema:validate(Schema
                            ,Device

@@ -15,8 +15,7 @@
         ,sip_realm/1, sip_realm/2, set_sip_realm/2
         ,sip_ip/1, sip_ip/2, set_sip_ip/2
         ,sip_invite_format/1, sip_invite_format/2, set_sip_invite_format/2
-        ,sip_route/1, sip_route/2, set_sip_route/2
-		,set_custom_sip_headers/2
+        ,sip_route/1, sip_route/2, set_sip_route/2, set_custom_sip_headers/2
         ,custom_sip_headers_inbound/1, custom_sip_headers_inbound/2, set_custom_sip_headers_inbound/2
         ,custom_sip_headers_outbound/1, custom_sip_headers_outbound/2, set_custom_sip_headers_outbound/2
         ,custom_sip_header_inbound/2, custom_sip_header_inbound/3
