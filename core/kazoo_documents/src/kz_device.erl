@@ -128,7 +128,6 @@ sip_method(DeviceJObj) ->
 sip_method(DeviceJObj, Default) ->
     kz_json:get_value(?METHOD, DeviceJObj, Default).
 
-%% Deprecated
 -spec sip_realm(doc()) -> api_binary().
 -spec sip_realm(doc(), Default) -> ne_binary() | Default.
 sip_realm(DeviceJObj) ->
