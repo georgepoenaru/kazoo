@@ -29,7 +29,7 @@ auxiliary_functions_test_() ->
     ,?_assertEqual(<<"fr-fr">>, kz_device:language(Device1))
     ,?_assertEqual(<<"sip_device">>, kz_device:device_type(Device1))
     ,?_assertEqual(<<"user0000000000000000000000000001">>, kz_device:owner_id(Device1))
-    ,?_assertEqual(<<"America/New_York">>, kz_device:timezone(Device1)) 
+    ,?_assertEqual(<<"America/New_York">>, kz_device:timezone(Device1))
     ,?_assert(kz_device:enabled(Device1))
     ].
 
@@ -202,7 +202,7 @@ outbound_dynamic_flags_test_() ->
 
 device_param_setting_test_() ->
     {'ok', Device} = kz_device:fetch(?MASTER_ACCOUNT, ?DEVICE_1_ID),
-    
+
     Setup = [{<<"rick_and_morty">>, fun kz_device:set_sip_username/2, fun kz_device:sip_username/1}
             ,{<<"birdperson">>, fun kz_device:set_sip_password/2, fun kz_device:sip_password/1}
             ,{<<"OAuth">>, fun kz_device:set_sip_method/2, fun kz_device:sip_method/1}
@@ -218,11 +218,9 @@ device_param_setting_test_() ->
             ,{'false', fun kz_device:set_enabled/2, fun kz_device:enabled/1}
             ,{'false', fun kz_device:set_unsolicitated_mwi_updates/2, fun kz_device:unsolicitated_mwi_updates/1}
             ],
-    
+
     [?_assertEqual(Value, Get(Set(Device, Value))) || {Value, Set, Get} <- Setup].
 
-           
-            
 validate(Schema, Device) ->
     kz_json_schema:validate(Schema
                            ,Device
